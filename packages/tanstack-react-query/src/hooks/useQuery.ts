@@ -134,7 +134,10 @@ function useQueryCore<
 
   const { query, parameters, queryKey, streams, ...resolvedOptions } = options;
 
-  const { queries: [{ queryFn }], streamsHaveSynced } = usePowerSyncQueries(
+  const {
+    queries: [{ queryFn: powerSyncQueryFn }],
+    streamsHaveSynced
+  } = usePowerSyncQueries(
     [
       {
         query,
@@ -146,12 +149,19 @@ function useQueryCore<
     queryClient
   );
 
+  const isSuspense = useQueryFn === Tanstack.useSuspenseQuery;
+  // The real query function (PowerSync-backed or the user's own).
+  const resolvedQueryFn = query ? powerSyncQueryFn : resolvedOptions.queryFn;
+  // skipToken disables the query without clobbering the user's own `enabled`.
+  // Suspense queries cannot be disabled (TanStack rejects skipToken and forces
+  // `enabled: true`), so suspense always uses the real query function.
+  const queryFn = streamsHaveSynced || isSuspense ? resolvedQueryFn : Tanstack.skipToken;
+
   return useQueryFn(
     {
       ...(resolvedOptions as TQueryOptions),
       queryKey,
-      queryFn: query ? queryFn : resolvedOptions.queryFn,
-      enabled: streamsHaveSynced
+      ...((typeof queryFn === 'function' || queryFn === Tanstack.skipToken) && { queryFn })
     } as TQueryOptions,
     queryClient
   );
