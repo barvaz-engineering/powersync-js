@@ -150,15 +150,16 @@ export function useQueries(
     return queriesInput.map((queryOptions, idx) => {
       const { query, parameters, ...rest } = queryOptions;
       const state = states[idx];
+      // skipToken disables the query without clobbering the user's own `enabled`.
+      const queryFn = streamsHaveSynced ? (query ? state.queryFn : rest.queryFn) : Tanstack.skipToken;
 
       return {
         ...rest,
-        queryFn: query ? state.queryFn : rest.queryFn,
-        queryKey: rest.queryKey,
-        enabled: streamsHaveSynced
+        queryFn,
+        queryKey: rest.queryKey
       };
     });
-  }, [queriesInput, states]);
+  }, [queriesInput, states, streamsHaveSynced]);
 
   return Tanstack.useQueries(
     {
